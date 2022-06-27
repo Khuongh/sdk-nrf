@@ -747,8 +747,10 @@ void audio_datapath_sdu_ref_update(uint32_t sdu_ref_us)
 }
 
 void audio_datapath_stream_out(const uint8_t *buf, size_t size, uint32_t sdu_ref_us, bool bad_frame,
-			       uint32_t recv_frame_ts_us)
+			       uint32_t recv_frame_ts_us, uint16_t sn)
 {
+
+	LOG_INF("Seq Nr: %d", sn);
 	if (!ctrl_blk.stream_started) {
 		LOG_WRN("Stream not started");
 		return;

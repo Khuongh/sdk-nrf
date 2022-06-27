@@ -178,7 +178,7 @@ static void stream_recv_cb(struct bt_audio_stream *stream, const struct bt_iso_r
 {
 	static uint32_t recv_cnt;
 	bool bad_frame = false;
-
+	// LOG_INF("Sequence number: %d", info->sn);
 	if (receive_cb == NULL) {
 		LOG_ERR("The RX callback has not been set");
 		return;
@@ -187,8 +187,8 @@ static void stream_recv_cb(struct bt_audio_stream *stream, const struct bt_iso_r
 	if (!(info->flags & BT_ISO_FLAGS_VALID)) {
 		bad_frame = true;
 	}
-
-	receive_cb(buf->data, buf->len, bad_frame, info->ts);
+	
+	receive_cb(buf->data, buf->len, bad_frame, info->ts, info->sn);
 
 	recv_cnt++;
 	if ((recv_cnt % 1000U) == 0U) {

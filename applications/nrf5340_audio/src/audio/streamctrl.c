@@ -35,6 +35,7 @@ struct ble_iso_data {
 	bool bad_frame;
 	uint32_t sdu_ref;
 	uint32_t recv_frame_ts;
+	uint16_t sn;
 } __packed;
 
 DATA_FIFO_DEFINE(ble_fifo_rx, CONFIG_BUF_BLE_RX_PACKET_NUM, WB_UP(sizeof(struct ble_iso_data)));
@@ -106,7 +107,7 @@ static void ble_test_pattern_receive(uint8_t const *const p_data, size_t data_si
 
 /* Callback for handling BLE RX */
 static void le_audio_rx_data_handler(uint8_t const *const p_data, size_t data_size, bool bad_frame,
-				     uint32_t sdu_ref)
+				     uint32_t sdu_ref, uint16_t sn)
 {
 	/* Capture timestamp of when audio frame is received */
 	uint32_t recv_frame_ts = audio_sync_timer_curr_time_get();
@@ -114,7 +115,7 @@ static void le_audio_rx_data_handler(uint8_t const *const p_data, size_t data_si
 	/* Since the audio datapath thread is preemptive, no actions on the
 	 * FIFO can happen whilst in this handler.
 	 */
-
+	// LOG_INF("sequence nr: %d", sn);
 	if (strm_state != STATE_STREAMING) {
 		/* Throw away data */
 		LOG_DBG("Not in streaming state, throwing data: %d", strm_state);
@@ -163,6 +164,7 @@ static void le_audio_rx_data_handler(uint8_t const *const p_data, size_t data_si
 	iso_received->data_size = data_size;
 	iso_received->sdu_ref = sdu_ref;
 	iso_received->recv_frame_ts = recv_frame_ts;
+	iso_received->sn = sn;
 
 	ret = data_fifo_block_lock(&ble_fifo_rx, (void *)&iso_received,
 				   sizeof(struct ble_iso_data));
@@ -188,7 +190,7 @@ static void audio_datapath_thread(void *dummy1, void *dummy2, void *dummy3)
 #else
 		audio_datapath_stream_out(iso_received->data, iso_received->data_size,
 					  iso_received->sdu_ref, iso_received->bad_frame,
-					  iso_received->recv_frame_ts);
+					  iso_received->recv_frame_ts, iso_received->sn);
 #endif
 		ret = data_fifo_block_free(&ble_fifo_rx, (void *)&iso_received);
 		ERR_CHK(ret);
