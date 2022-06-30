@@ -220,6 +220,9 @@ static int led_device_tree_parse(void)
 				return ret;
 			}
 
+		} else if(strstr(led_labels[i], "LED_MONO_BLUE")) {
+			//This LED is controlled by sync timer (GPIOTE TASK)
+		
 		} else if (strstr(led_labels[i], "LED_MONO")) {
 			ret = config_led_monochrome(led_unit, i);
 			if (ret) {
