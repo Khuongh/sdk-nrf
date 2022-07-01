@@ -133,37 +133,22 @@ static void ppi_led_1_blink_init(void){
 	timer_clear_event_addr = nrfx_timer_compare_event_address_get(&timer_instance, NRF_TIMER_CC_CHANNEL3);
 	gpiote_clear_task_addr = nrfx_gpiote_clr_task_addr_get(BLINKLED);
 
-	nrf_dppi_channel_group_t dppi_group_led_sync;
-
-	nrfx_dppi_group_alloc(&dppi_group_led_sync);
-
 	//Set up endpoints for DPPI channels
 	nrfx_gppi_channel_endpoints_setup(dppi_channel_gpiote_set,
 		timer_set_event_addr,
 		gpiote_set_task_addr	
 	);
-
 	nrfx_gppi_channel_endpoints_setup(dppi_channel_gpiote_clear,
 		timer_clear_event_addr,
 		gpiote_clear_task_addr	
 	);
-	nrfx_dppi_channel_disable(dppi_channel_gpiote_set);
-	nrfx_dppi_channel_disable(dppi_channel_gpiote_clear);
-	nrfx_dppi_group_disable(dppi_group_led_sync);
-	nrfx_dppi_channel_include_in_group(dppi_channel_gpiote_set, dppi_group_led_sync);
-	nrfx_dppi_channel_include_in_group(dppi_channel_gpiote_clear, dppi_group_led_sync);
 
 	//Enable DPPI channels
-	// ret = nrfx_dppi_channel_enable(dppi_channel_gpiote_clear);
-	// 	if(ret - NRFX_ERROR_BASE_NUM){
-	// 		LOG_ERR("error_DPPI_channel");
-	// 	}
-	// ret = nrfx_dppi_channel_enable(dppi_channel_gpiote_set);
-	// if(ret - NRFX_ERROR_BASE_NUM){
-	// 	LOG_ERR("error_set_channel");
-	// }
-
-	ret = nrfx_dppi_group_enable(dppi_group_led_sync);
+	ret = nrfx_dppi_channel_enable(dppi_channel_gpiote_clear);
+		if(ret - NRFX_ERROR_BASE_NUM){
+			LOG_ERR("error_DPPI_channel");
+		}
+	ret = nrfx_dppi_channel_enable(dppi_channel_gpiote_set);
 	if(ret - NRFX_ERROR_BASE_NUM){
 		LOG_ERR("error_set_channel");
 	}
