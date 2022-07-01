@@ -591,7 +591,7 @@ static void audio_datapath_i2s_blk_complete(uint32_t frame_start_ts, uint32_t *r
 {
 	int ret;
 	static bool underrun_condition;
-
+	// LOG_INF("frame_start_ts: %d", frame_start_ts);
 	alt_buffer_free(tx_buf_released);
 
 	/*** Presentation delay measurement ***/
@@ -624,8 +624,8 @@ static void audio_datapath_i2s_blk_complete(uint32_t frame_start_ts, uint32_t *r
 
 				if ((ctrl_blk.out.total_blk_underruns %
 				     UNDERRUN_LOG_INTERVAL_BLKS) == 0) {
-					LOG_WRN("In I2S TX underrun condition, total: %d",
-						ctrl_blk.out.total_blk_underruns);
+					// LOG_WRN("In I2S TX underrun condition, total: %d",
+					// 	ctrl_blk.out.total_blk_underruns);
 				}
 			}
 
@@ -750,7 +750,29 @@ void audio_datapath_stream_out(const uint8_t *buf, size_t size, uint32_t sdu_ref
 			       uint32_t recv_frame_ts_us, uint16_t sn)
 {
 
-	LOG_INF("Seq Nr: %d", sn);
+	static uint32_t last_time_stamp = 0;
+	static uint32_t delta_time_stamp = 0;
+	//Updates compare value for setting GPIOTE Sync LED
+	if((sn % 200) == 0){
+		uint32_t current_time_stamp = audio_sync_timer_curr_time_get();
+		delta_time_stamp = current_time_stamp - last_time_stamp;
+
+		uint32_t new_compare_set_time = current_time_stamp + (delta_time_stamp);
+		sync_led_1_compare_time_set_update(new_compare_set_time);
+		last_time_stamp = audio_sync_timer_curr_time_get();
+	}
+	//Updates compare value for clearing GPIOTE Sync LED
+	else if((sn % 200) == 100){
+		uint32_t current_time_stamp = audio_sync_timer_curr_time_get();
+		delta_time_stamp = current_time_stamp - last_time_stamp;
+
+		uint32_t new_compare_clear_time = current_time_stamp + (delta_time_stamp);
+		sync_led_1_compare_time_clear_update(new_compare_clear_time);
+		last_time_stamp = audio_sync_timer_curr_time_get();
+	}
+
+
+	
 	if (!ctrl_blk.stream_started) {
 		LOG_WRN("Stream not started");
 		return;

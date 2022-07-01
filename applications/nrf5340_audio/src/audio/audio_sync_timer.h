@@ -61,4 +61,7 @@ uint32_t audio_sync_timer_i2s_frame_start_ts_get(void);
  */
 uint32_t audio_sync_timer_curr_time_get(void);
 
+void sync_led_1_compare_time_set_update(uint32_t toggle_time_us);
+void sync_led_1_compare_time_clear_update(uint32_t toggle_time_us);
+
 #endif /* _AUDIO_SYNC_TIMER_H_ */
