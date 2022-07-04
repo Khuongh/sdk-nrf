@@ -220,6 +220,10 @@ static int led_device_tree_parse(void)
 				return ret;
 			}
 
+		} else if (strstr(led_labels[i], "LED_MONO_BLUE") && CONFIG_AUDIO_DEV == HEADSET) {
+			//This LED is controlled by sync timer (GPIOTE TASK), and will not be initialized here
+			// for devices configured as headset
+
 		} else if (strstr(led_labels[i], "LED_MONO")) {
 			ret = config_led_monochrome(led_unit, i);
 			if (ret) {

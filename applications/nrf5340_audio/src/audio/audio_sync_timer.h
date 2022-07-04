@@ -61,4 +61,24 @@ uint32_t audio_sync_timer_i2s_frame_start_ts_get(void);
  */
 uint32_t audio_sync_timer_curr_time_get(void);
 
+/**
+ * @brief Updates set compare time in us
+ * 
+ * @param toggle_time_us New set value
+ */
+void sync_led_1_compare_time_set_update(uint32_t toggle_time_us);
+
+/**
+ * @brief Updates clr compare time in us
+ * 
+ * @param toggle_time_us New clr value
+ */
+void sync_led_1_compare_time_clear_update(uint32_t toggle_time_us);
+
+/**
+ * @brief Turns LED_APP_1_BLUE on
+ * 
+ */
+void sync_led_1_on();
+
 #endif /* _AUDIO_SYNC_TIMER_H_ */

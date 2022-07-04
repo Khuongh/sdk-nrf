@@ -51,6 +51,7 @@
 #include <nrfx_dppi.h>
 #include <nrfx_i2s.h>
 #include <nrfx_ipc.h>
+#include <nrfx_gpiote.h>
 
 #include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(audio_sync_timer, CONFIG_LOG_AUDIO_SYNC_TIMER_LEVEL);
@@ -66,8 +67,12 @@ LOG_MODULE_REGISTER(audio_sync_timer, CONFIG_LOG_AUDIO_SYNC_TIMER_LEVEL);
 
 static const nrfx_timer_t timer_instance = NRFX_TIMER_INSTANCE(AUDIO_SYNC_TIMER_INSTANCE);
 
+#define BLINKLED DT_GPIO_PIN(DT_ALIAS(led6), gpios)
+
 static uint8_t dppi_channel_timer_clear;
 static uint8_t dppi_channel_i2s_frame_start;
+static uint8_t dppi_channel_gpiote_clear;
+static uint8_t dppi_channel_gpiote_set;
 
 static nrfx_timer_config_t cfg = { .frequency = NRF_TIMER_FREQ_1MHz,
 				   .mode = NRF_TIMER_MODE_TIMER,
@@ -77,6 +82,78 @@ static nrfx_timer_config_t cfg = { .frequency = NRF_TIMER_FREQ_1MHz,
 
 static void event_handler(nrf_timer_event_t event_type, void *ctx)
 {
+}
+
+void sync_led_1_on()
+{
+	nrfx_timer_compare(&timer_instance, NRF_TIMER_CC_CHANNEL3, audio_sync_timer_curr_time_get(),
+			   true);
+	nrfx_gpiote_out_task_trigger(BLINKLED);
+}
+
+void sync_led_1_compare_time_set_update(uint32_t set_time_us)
+{
+	nrfx_timer_compare(&timer_instance, NRF_TIMER_CC_CHANNEL2, set_time_us, true);
+}
+
+void sync_led_1_compare_time_clear_update(uint32_t clear_time_us)
+{
+	nrfx_timer_compare(&timer_instance, NRF_TIMER_CC_CHANNEL3, clear_time_us, true);
+}
+
+static int led_1_sync_blink_init(void)
+{
+	nrfx_err_t ret;
+
+	/*Connected the irq handler for timer 1*/
+	IRQ_CONNECT(DT_IRQN(DT_NODELABEL(timer1)), 0, nrfx_isr, nrfx_timer_1_irq_handler, 0);
+
+	/*Check if GPIOTE is initiated, if not initiate GPIOTE*/
+	if (nrfx_gpiote_is_init()) {
+		LOG_INF("GPIOTE is already initiated");
+	} else {
+		nrfx_gpiote_init(0);
+		LOG_INF("Inializing GPIOTE");
+	}
+
+	/*GPIOTE out configs for LED 1*/
+	nrfx_gpiote_out_config_t const gpiote_cfg = NRFX_GPIOTE_CONFIG_OUT_TASK_HIGH;
+	nrfx_gpiote_out_init(BLINKLED, &gpiote_cfg);
+	nrfx_gpiote_out_task_enable(BLINKLED);
+
+	/*Initializing SET task for GPIOTE (LED1)*/
+	ret = nrfx_dppi_channel_alloc(&dppi_channel_gpiote_set);
+	if (ret - NRFX_ERROR_BASE_NUM) {
+		LOG_ERR("nrfx DPPI channel alloc error (GPIOTE SET task) - Return value: %d", ret);
+		return ret;
+	}
+	nrf_gpiote_task_t gpiote_set_task = nrfx_gpiote_set_task_get(BLINKLED);
+	nrf_timer_publish_set(timer_instance.p_reg, NRF_TIMER_EVENT_COMPARE2,
+			      dppi_channel_gpiote_set);
+	nrf_gpiote_subscribe_set(NRF_GPIOTE, gpiote_set_task, dppi_channel_gpiote_set);
+	ret = nrfx_dppi_channel_enable(dppi_channel_gpiote_set);
+	if (ret - NRFX_ERROR_BASE_NUM) {
+		LOG_ERR("nrfx DPPI channel enable error (GPIOTE SET task) - Return value: %d", ret);
+		return ret;
+	}
+
+	/*Initializing CLEAR task for GPIOTE (LED1)*/
+	ret = nrfx_dppi_channel_alloc(&dppi_channel_gpiote_clear);
+	if (ret - NRFX_ERROR_BASE_NUM) {
+		LOG_ERR("nrfx DPPI channel alloc error (GPIOTE CLR task) - Return value: %d", ret);
+		return ret;
+	}
+	nrf_gpiote_task_t gpiote_clear_task = nrfx_gpiote_clr_task_get(BLINKLED);
+	nrf_timer_publish_set(timer_instance.p_reg, NRF_TIMER_EVENT_COMPARE3,
+			      dppi_channel_gpiote_clear);
+	nrf_gpiote_subscribe_set(NRF_GPIOTE, gpiote_clear_task, dppi_channel_gpiote_clear);
+	ret = nrfx_dppi_channel_enable(dppi_channel_gpiote_clear);
+	if (ret - NRFX_ERROR_BASE_NUM) {
+		LOG_ERR("nrfx DPPI channel enable error (GPIOTE CLR task) - Return value: %d", ret);
+		return ret;
+	}
+
+	return 0;
 }
 
 /**
@@ -104,6 +181,15 @@ static int audio_sync_timer_init(const struct device *unused)
 		LOG_ERR("nrfx timer init error - Return value: %d", ret);
 		return ret;
 	}
+
+	ret = led_1_sync_blink_init();
+	if (ret) {
+		LOG_ERR("Error with setting up sync for LED 1 Return value: %d", ret);
+		return ret;
+	}
+
+	LOG_INF("Synchronization for LED 1 initialized.");
+
 	nrfx_timer_enable(&timer_instance);
 
 	/* Initialize capturing of I2S frame start event timestamps */

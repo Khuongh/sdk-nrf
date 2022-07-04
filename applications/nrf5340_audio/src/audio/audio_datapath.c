@@ -747,8 +747,31 @@ void audio_datapath_sdu_ref_update(uint32_t sdu_ref_us)
 }
 
 void audio_datapath_stream_out(const uint8_t *buf, size_t size, uint32_t sdu_ref_us, bool bad_frame,
-			       uint32_t recv_frame_ts_us)
+			       uint32_t recv_frame_ts_us, uint16_t sn)
 {
+	static uint32_t last_time_stamp = 0;
+	static uint32_t delta_time_stamp = 0;
+
+	/*Updates compare value for setting GPIOTE Sync LED*/
+	if ((sn % 200) == 0) {
+		uint32_t current_time_stamp = audio_sync_timer_curr_time_get();
+		delta_time_stamp = current_time_stamp - last_time_stamp;
+
+		uint32_t new_compare_set_time = current_time_stamp + (delta_time_stamp);
+		sync_led_1_compare_time_set_update(new_compare_set_time);
+		last_time_stamp = audio_sync_timer_curr_time_get();
+	}
+
+	/*Updates compare value for clearing GPIOTE Sync LED*/
+	else if ((sn % 200) == 100) {
+		uint32_t current_time_stamp = audio_sync_timer_curr_time_get();
+		delta_time_stamp = current_time_stamp - last_time_stamp;
+
+		uint32_t new_compare_clear_time = current_time_stamp + (delta_time_stamp);
+		sync_led_1_compare_time_clear_update(new_compare_clear_time);
+		last_time_stamp = audio_sync_timer_curr_time_get();
+	}
+
 	if (!ctrl_blk.stream_started) {
 		LOG_WRN("Stream not started");
 		return;
