@@ -10,6 +10,7 @@
 #include <errno.h>
 
 #include "pcm_stream_channel_modifier.h"
+
 #if (CONFIG_SW_CODEC_LC3)
 #include "sw_codec_lc3.h"
 #endif /* (CONFIG_SW_CODEC_LC3) */
@@ -54,22 +55,76 @@ static void prev_frame_sbc_flush(char *pcm_data)
 
 #endif /* (CONFIG_SW_CODEC_SBC) */
 
+#if (CONFIG_SW_CODEC_OPUS)
+OpusEncoder *encoder;
+OpusDecoder *decoder;
+static size_t nbBytes;
+
+#endif /*CONFIG_SW_CODEC_OPUS*/
+
 int sw_codec_encode(void *pcm_data, size_t pcm_size, uint8_t **encoded_data, size_t *encoded_size)
 {
 	/* Temp storage for split stereo PCM signal */
-	char pcm_data_mono[AUDIO_CH_NUM][PCM_NUM_BYTES_MONO] = { 0 };
+	static char pcm_data_mono[AUDIO_CH_NUM][PCM_NUM_BYTES_MONO] = { 0 };
 	/* Make sure we have enough space for two frames (stereo) */
-	static uint8_t m_encoded_data[ENC_MAX_FRAME_SIZE * AUDIO_CH_NUM];
+	static uint8_t m_encoded_data[ENC_MAX_FRAME_SIZE * AUDIO_CH_NUM] = { 0 };
 
 	size_t pcm_block_size_mono;
 	int ret;
-
+	// LOG_INF("ENC_MAX_FRAME_SIZE: %d", ENC_MAX_FRAME_SIZE);
+	// LOG_INF("SAMPLE RATE: %d", OPUS_SAMPLE_RATE);
+	static bool first = true;
 	if (!m_config.encoder.enabled) {
 		LOG_ERR("Encoder has not been initialized");
 		return -ENXIO;
 	}
 
 	switch (m_config.sw_codec) {
+	case SW_CODEC_OPUS: {
+#if (CONFIG_SW_CODEC_OPUS)
+		// LOG_INF("pcm_size: %d", pcm_size);
+		ret = pscm_two_channel_split(pcm_data, pcm_size, CONFIG_AUDIO_BIT_DEPTH_BITS,
+					     pcm_data_mono[AUDIO_CH_L], pcm_data_mono[AUDIO_CH_R],
+					     &pcm_block_size_mono);
+		if (ret) {
+			return ret;
+		}
+
+		switch (m_config.encoder.channel_mode) {
+		case SW_CODEC_MONO: {
+			nbBytes = opus_encode(encoder, (int16_t *)pcm_data_mono[m_config.encoder.audio_ch], pcm_block_size_mono, m_encoded_data, sizeof(m_encoded_data));
+			if (nbBytes <= 0) {
+				LOG_ERR("Failed to encode packet");
+				return -ENODEV; //Endre feilkode til noe som er mer riktig?
+			}
+			break;	
+		}
+		case SW_CODEC_STEREO: {
+			LOG_INF("i want stereo");
+
+			break;
+		}
+		default:
+			LOG_ERR("Unsupported channel mode: %d", m_config.encoder.channel_mode);
+			return -ENODEV;
+		}
+		if (first) {
+			for (int i = 0; i <5; i++) {
+				LOG_INF("raw_in_data[%d]: %d", i, pcm_data_mono[m_config.encoder.audio_ch][i]);
+			}
+			LOG_INF("nbBytes: %d, size_of_m_encoded_data: %d", nbBytes, sizeof(m_encoded_data)/sizeof(m_encoded_data[0]));
+			for (int i = 0; i < 5; i++){
+				LOG_INF("m_encoded_data[%d] = %d", i, m_encoded_data[i]);
+			}
+			first = false;
+		}
+		*encoded_data = m_encoded_data;
+		*encoded_size = nbBytes;
+
+#endif /* (CONFIG_SW_CODEC_OPUS) */
+		break;		
+	}
+
 	case SW_CODEC_LC3: {
 #if (CONFIG_SW_CODEC_LC3)
 		uint16_t encoded_bytes_written;
@@ -209,7 +264,6 @@ int sw_codec_encode(void *pcm_data, size_t pcm_size, uint8_t **encoded_data, siz
 		LOG_ERR("Unsupported codec: %d", m_config.sw_codec);
 		return -ENODEV;
 	}
-
 	return 0;
 }
 
@@ -222,13 +276,61 @@ int sw_codec_decode(uint8_t const *const encoded_data, size_t encoded_size, bool
 	}
 
 	int ret;
-	char pcm_data_mono[PCM_NUM_BYTES_MONO] = { 0 };
-	static char pcm_data_stereo[PCM_NUM_BYTES_STEREO];
-
+	int16_t pcm_data_mono[PCM_NUM_BYTES_MONO] = { 0 };
+	char pcm_data_stereo[PCM_NUM_BYTES_STEREO];
 	size_t pcm_size_stereo = 0;
 	size_t pcm_size_session = 0;
+	static bool first = true;
+	if (first){	
+		
+		LOG_WRN("Encoded Size: %d", encoded_size);
+		for (int i = 0; i < 5; i++){
+				LOG_INF("encoded_data[%d] = %d", i, encoded_data[i]);
+			}
+	}
 
 	switch (m_config.sw_codec) {
+	case SW_CODEC_OPUS: {
+#if (CONFIG_SW_CODEC_OPUS)
+		int framesize;
+		
+		switch (m_config.decoder.channel_mode) {
+		case SW_CODEC_MONO: {
+			pcm_size_session = opus_decode(decoder, encoded_data, encoded_size, pcm_data_mono, 5760, 0);
+			if(pcm_size_session < 0){
+				LOG_ERR("faulty decode: %d", pcm_size_session);
+				return pcm_size_session;
+			}
+			if (first) {
+				for (int i = 0; i <5; i++) {
+					LOG_INF("pcm_data_mono[%d]: %d", i, pcm_data_mono[i]);
+				}
+				LOG_INF("framesize: %d", framesize);
+				first = false;
+
+			}
+
+			ret = pscm_zero_pad(pcm_data_mono, pcm_size_session,
+					    m_config.decoder.audio_ch, CONFIG_AUDIO_BIT_DEPTH_BITS,
+					    pcm_data_stereo, &pcm_size_stereo);
+			if (ret) {
+				return ret;
+			}
+			break;
+		}
+		case SW_CODEC_STEREO: {
+			LOG_INF("Stereo ?");
+			break;
+		}
+		default:
+			LOG_ERR("Unsupported channel mode: %d", m_config.encoder.channel_mode);
+			return -ENODEV;
+		}
+		*decoded_size = pcm_size_stereo;
+		*decoded_data = pcm_data_stereo;
+#endif /* (CONFIG_SW_CODEC_OPUS) */
+	}
+	
 	case SW_CODEC_LC3: {
 #if (CONFIG_SW_CODEC_LC3)
 		/* Typically used for right channel if stereo signal */
@@ -377,6 +479,28 @@ int sw_codec_uninit(struct sw_codec_config sw_codec_cfg)
 		return -ENODEV;
 	}
 	switch (m_config.sw_codec) {
+	case SW_CODEC_OPUS:
+#if (CONFIG_SW_CODEC_OPUS)
+		if (sw_codec_cfg.encoder.enabled) {
+			if (!m_config.encoder.enabled) {
+				LOG_ERR("Trying to uninit encoder, it has not been initialized");
+				return -EALREADY;
+			}
+			opus_encoder_destroy(encoder);
+			m_config.encoder.enabled = false;
+		}
+
+		if (sw_codec_cfg.decoder.enabled) {
+			if (!m_config.decoder.enabled) {
+				LOG_WRN("Trying to uninit decoder, it has not been initialized");
+				return -EALREADY;
+			}
+			opus_decoder_destroy(decoder);
+			m_config.decoder.enabled = false;
+		}
+#endif /* (CONFIG_SW_CODEC_OPUS) */
+			break;
+
 	case SW_CODEC_LC3:
 #if (CONFIG_SW_CODEC_LC3)
 		if (sw_codec_cfg.encoder.enabled) {
@@ -422,6 +546,69 @@ int sw_codec_uninit(struct sw_codec_config sw_codec_cfg)
 int sw_codec_init(struct sw_codec_config sw_codec_cfg)
 {
 	switch (sw_codec_cfg.sw_codec) {
+	case SW_CODEC_OPUS: {
+#if (CONFIG_SW_CODEC_OPUS)
+		int err;
+		if (sw_codec_cfg.encoder.enabled){
+			if (m_config.encoder.enabled){
+				LOG_WRN("The OPUS encoder is already initialized");
+				return -EALREADY;
+			}
+			LOG_INF("OPUS_SAMPLE_RATE: %d", OPUS_SAMPLE_RATE);
+			LOG_INF("Channel mode: %d", sw_codec_cfg.encoder.channel_mode);
+			encoder = opus_encoder_create(OPUS_SAMPLE_RATE, sw_codec_cfg.encoder.channel_mode, APPLICATION, &err);
+			if (err < 0) {
+				LOG_ERR("Failed to create the OPUS Encoder (err: %d)", err);
+				return err;
+			}
+			LOG_INF("Encoder %p", (void *)encoder);
+			err = opus_encoder_ctl(encoder, OPUS_SET_BITRATE(OPUS_BITRATE/2));
+			if (err < 0) {
+				LOG_ERR("Failed to create the OPUS Encoder2 (err: %d)", err);
+				return err;
+			}
+   			err = opus_encoder_ctl(encoder, OPUS_SET_VBR(0));
+			if (err < 0) {
+				LOG_ERR("Failed to create the OPUS Encoder3 (err: %d)", err);
+				return err;
+			}
+			err = opus_encoder_ctl(encoder, OPUS_SET_COMPLEXITY(1));
+			if (err < 0) {
+				LOG_ERR("Failed to create the OPUS Encoder4 (err: %d)", err);
+				return err;
+			}
+			// err = opus_encoder_ctl(encoder, OPUS_SET_SIGNAL(OPUS_SIGNAL_MUSIC));
+
+			err = opus_encoder_ctl(encoder, OPUS_SET_LSB_DEPTH(16));
+			if (err < 0) {
+				LOG_ERR("Failed to create the OPUS Encoder4 (err: %d)", err);
+				return err;
+			}
+			// err = opus_encoder_ctl(encoder, OPUS_SET_DTX(0));
+			// err = opus_encoder_ctl(encoder, OPUS_SET_PACKET_LOSS_PERC(0));
+			// err = opus_encoder_ctl(encoder, OPUS_SET_INBAND_FEC(0));
+			LOG_INF("Encoder configured");
+		}
+
+		if(sw_codec_cfg.decoder.enabled){
+			if (m_config.decoder.enabled){
+				LOG_WRN("The OPUS decoder is already initialized");
+				return -EALREADY;
+			}
+			LOG_INF("channel:%d", sw_codec_cfg.decoder.channel_mode);
+			decoder = opus_decoder_create(OPUS_SAMPLE_RATE, sw_codec_cfg.decoder.channel_mode, &err);
+			if (err < 0){
+				LOG_ERR("Failed to create OPUS Decoder");
+				return err;
+			}
+		LOG_INF("Decoder: %p", (void *)decoder);
+		LOG_INF("Decoder initialized");
+		}
+		break;
+#endif /*CONFIG_SW_CODEC_OPUS */
+		LOG_ERR("OPUS is not compiled in, please open menuconfig and select OPUS");
+		return -ENODEV;
+	}
 	case SW_CODEC_LC3: {
 #if (CONFIG_SW_CODEC_LC3)
 		int ret;
@@ -504,7 +691,7 @@ int sw_codec_init(struct sw_codec_config sw_codec_cfg)
 		LOG_ERR("Unsupported codec: %d", sw_codec_cfg.sw_codec);
 		return false;
 	}
-
+	
 	m_config = sw_codec_cfg;
 	return 0;
 }

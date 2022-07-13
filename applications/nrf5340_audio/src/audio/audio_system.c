@@ -44,8 +44,10 @@ static size_t test_tone_size;
 static bool audio_system_started;
 
 static void audio_gateway_configure(void)
-{
-	if (IS_ENABLED(CONFIG_SW_CODEC_SBC)) {
+{	
+	if (IS_ENABLED(CONFIG_SW_CODEC_OPUS)) {
+		sw_codec_cfg.sw_codec = SW_CODEC_OPUS;
+	} else if (IS_ENABLED(CONFIG_SW_CODEC_SBC)) {
 		sw_codec_cfg.sw_codec = SW_CODEC_SBC;
 	} else if (IS_ENABLED(CONFIG_SW_CODEC_LC3)) {
 		sw_codec_cfg.sw_codec = SW_CODEC_LC3;
@@ -56,14 +58,16 @@ static void audio_gateway_configure(void)
 	sw_codec_cfg.decoder.channel_mode = SW_CODEC_MONO;
 #endif /* (CONFIG_STREAM_BIDIRECTIONAL) */
 
-	if (IS_ENABLED(CONFIG_SW_CODEC_SBC)) {
+	if (IS_ENABLED(CONFIG_SW_CODEC_OPUS)) {
+		sw_codec_cfg.encoder.bitrate = OPUS_BITRATE; //Currently the same bitrate as LC3 Mono maybe change in the future?
+	} else if (IS_ENABLED(CONFIG_SW_CODEC_SBC)) {
 		sw_codec_cfg.encoder.bitrate = SBC_MONO_BITRATE;
 	} else if (IS_ENABLED(CONFIG_SW_CODEC_LC3)) {
 		sw_codec_cfg.encoder.bitrate = CONFIG_LC3_MONO_BITRATE;
 	}
 
 #if (CONFIG_TRANSPORT_CIS)
-	sw_codec_cfg.encoder.channel_mode = SW_CODEC_STEREO;
+	sw_codec_cfg.encoder.channel_mode = SW_CODEC_MONO; //HAS TO BE CHANGED BACK TO STEREO WHEN DONE TESTING
 #else
 	sw_codec_cfg.encoder.channel_mode = SW_CODEC_MONO;
 #endif /* (CONFIG_TRANSPORT_CIS) */
@@ -72,7 +76,9 @@ static void audio_gateway_configure(void)
 
 static void audio_headset_configure(void)
 {
-	if (IS_ENABLED(CONFIG_SW_CODEC_SBC)) {
+	if (IS_ENABLED(CONFIG_SW_CODEC_OPUS)) {
+		sw_codec_cfg.sw_codec = SW_CODEC_OPUS;
+	} else if (IS_ENABLED(CONFIG_SW_CODEC_SBC)) {
 		sw_codec_cfg.sw_codec = SW_CODEC_SBC;
 	} else if (IS_ENABLED(CONFIG_SW_CODEC_LC3)) {
 		sw_codec_cfg.sw_codec = SW_CODEC_LC3;
@@ -82,7 +88,9 @@ static void audio_headset_configure(void)
 	sw_codec_cfg.encoder.enabled = true;
 	sw_codec_cfg.encoder.channel_mode = SW_CODEC_MONO;
 
-	if (IS_ENABLED(CONFIG_SW_CODEC_SBC)) {
+	if (IS_ENABLED(CONFIG_SW_CODEC_OPUS)) {
+		sw_codec_cfg.encoder.bitrate = OPUS_BITRATE; //Currently the same bitrate as LC3 Mono maybe change in the future?
+	} else if (IS_ENABLED(CONFIG_SW_CODEC_SBC)) {
 		sw_codec_cfg.encoder.bitrate = CONFIG_SBC_MONO_BITRATE;
 	} else if (IS_ENABLED(CONFIG_SW_CODEC_LC3)) {
 		sw_codec_cfg.encoder.bitrate = CONFIG_LC3_MONO_BITRATE;
@@ -142,13 +150,11 @@ static void encoder_thread(void *arg1, void *arg2, void *arg3)
 						    &num_bytes);
 				ERR_CHK(ret);
 			}
-
 			ret = sw_codec_encode(pcm_raw_data, FRAME_SIZE_BYTES, &encoded_data,
 					      &encoded_data_size);
 
 			ERR_CHK_MSG(ret, "Encode failed");
 		}
-
 		/* Print block usage */
 		if (debug_trans_count == DEBUG_INTERVAL_NUM) {
 			ret = data_fifo_num_used_get(&fifo_rx, &blocks_alloced_num,

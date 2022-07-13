@@ -143,6 +143,10 @@ config SW_CODEC_SBC
 	select SBC
 	help
 		Subband Codec
+
+config SW_CODEC_OPUS 
+	bool "OPUS"
+	select OPUS
 endchoice
 
 config SW_CODEC_PLC_DISABLED
@@ -159,6 +163,11 @@ config LC3_MONO_BITRATE
 osource "../modules/lib/lc3/Kconfig"
 
 endmenu # LC3
+
+menu "OPUS"
+visible if SW_CODEC_OPUS
+
+endmenu # OPUS
 
 #----------------------------------------------------------------------------#
 menu "SBC"
@@ -272,12 +281,12 @@ menu "Stack sizes"
 
 config ENCODER_STACK_SIZE
 	int "Stack size for encoder thread"
-	default 6750 if AUDIO_BIT_DEPTH_16
+	default 40000 if AUDIO_BIT_DEPTH_16
 	default 11264 if AUDIO_BIT_DEPTH_24 || AUDIO_BIT_DEPTH_32
 
 config AUDIO_DATAPATH_STACK_SIZE
 	int "Stack size for audio datapath thread"
-	default 4096 if AUDIO_BIT_DEPTH_16
+	default 40000 if AUDIO_BIT_DEPTH_16
 	default 7168 if AUDIO_BIT_DEPTH_24 || AUDIO_BIT_DEPTH_32
 
 endmenu # Stack sizes

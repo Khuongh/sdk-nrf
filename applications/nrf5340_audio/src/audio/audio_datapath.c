@@ -751,7 +751,6 @@ void audio_datapath_stream_out(const uint8_t *buf, size_t size, uint32_t sdu_ref
 {
 	static uint32_t last_time_stamp = 0;
 	static uint32_t delta_time_stamp = 0;
-
 	/*Updates compare value for setting GPIOTE Sync LED*/
 	if ((sn % 200) == 0) {
 		uint32_t current_time_stamp = audio_sync_timer_curr_time_get();
@@ -834,7 +833,7 @@ void audio_datapath_stream_out(const uint8_t *buf, size_t size, uint32_t sdu_ref
 	ret = sw_codec_decode(buf, size, bad_frame, &ctrl_blk.decoded_data, &pcm_size);
 
 	if (ret) {
-		LOG_WRN("SW codec decode error: %d", ret);
+		// LOG_WRN("SW codec decode error: %d", ret);
 	}
 
 	if (pcm_size != (BLK_STEREO_SIZE_OCTETS * NUM_BLKS_IN_FRAME)) {

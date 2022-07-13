@@ -92,7 +92,7 @@ static void data_received(const struct device *dev, struct net_buf *buffer, size
 	if (ret == -ENOMEM) {
 		void *temp;
 		size_t temp_size;
-
+		
 		LOG_WRN("USB RX overrun");
 
 		ret = data_fifo_pointer_last_filled_get(fifo_rx, &temp, &temp_size, K_NO_WAIT);

@@ -438,7 +438,7 @@ int le_audio_send(uint8_t const *const data, size_t size)
 	net_buf_reserve(buf, BT_ISO_CHAN_SEND_RESERVE);
 
 	//TODO: Handling dual channel sending properly
-	net_buf_add_mem(buf, data, 120);
+	net_buf_add_mem(buf, data, size); //Changed from 120 to size
 
 #if (CONFIG_AUDIO_SOURCE_I2S)
 	struct bt_iso_tx_info tx_info = { 0 };

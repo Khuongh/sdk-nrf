@@ -56,4 +56,7 @@ endmenu # Log levels
 #----------------------------------------------------------------------------#
 endif # NRF5340_AUDIO
 
+
+
+
 source "Kconfig.zephyr"

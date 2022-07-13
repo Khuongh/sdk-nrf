@@ -213,7 +213,6 @@ void streamctrl_encoded_data_send(void const *const data, size_t len)
 {
 	int ret;
 	static int prev_ret;
-
 	if (strm_state == STATE_STREAMING) {
 		ret = le_audio_send(data, len);
 

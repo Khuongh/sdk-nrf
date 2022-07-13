@@ -172,7 +172,6 @@ int le_audio_send(uint8_t const *const data, size_t size)
 	int ret;
 	static bool wrn_printed[CONFIG_BT_ISO_MAX_CHAN];
 	struct net_buf *buf;
-
 	if (streams[0].ep->status.state != BT_AUDIO_EP_STATE_STREAMING) {
 		return -ECANCELED;
 	}
