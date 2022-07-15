@@ -833,7 +833,7 @@ void audio_datapath_stream_out(const uint8_t *buf, size_t size, uint32_t sdu_ref
 	ret = sw_codec_decode(buf, size, bad_frame, &ctrl_blk.decoded_data, &pcm_size);
 
 	if (ret) {
-		// LOG_WRN("SW codec decode error: %d", ret);
+		LOG_WRN("SW codec decode error: %d", ret);
 	}
 
 	if (pcm_size != (BLK_STEREO_SIZE_OCTETS * NUM_BLKS_IN_FRAME)) {

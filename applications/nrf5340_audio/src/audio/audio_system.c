@@ -44,7 +44,7 @@ static size_t test_tone_size;
 static bool audio_system_started;
 
 static void audio_gateway_configure(void)
-{	
+{
 	if (IS_ENABLED(CONFIG_SW_CODEC_OPUS)) {
 		sw_codec_cfg.sw_codec = SW_CODEC_OPUS;
 	} else if (IS_ENABLED(CONFIG_SW_CODEC_SBC)) {
@@ -59,7 +59,7 @@ static void audio_gateway_configure(void)
 #endif /* (CONFIG_STREAM_BIDIRECTIONAL) */
 
 	if (IS_ENABLED(CONFIG_SW_CODEC_OPUS)) {
-		sw_codec_cfg.encoder.bitrate = OPUS_BITRATE; //Currently the same bitrate as LC3 Mono maybe change in the future?
+		sw_codec_cfg.encoder.bitrate = OPUS_BITRATE;
 	} else if (IS_ENABLED(CONFIG_SW_CODEC_SBC)) {
 		sw_codec_cfg.encoder.bitrate = SBC_MONO_BITRATE;
 	} else if (IS_ENABLED(CONFIG_SW_CODEC_LC3)) {
@@ -67,7 +67,8 @@ static void audio_gateway_configure(void)
 	}
 
 #if (CONFIG_TRANSPORT_CIS)
-	sw_codec_cfg.encoder.channel_mode = SW_CODEC_MONO; //HAS TO BE CHANGED BACK TO STEREO WHEN DONE TESTING
+	/* This has to be changed back to stereo when done implementing OPUS codec */
+	sw_codec_cfg.encoder.channel_mode = SW_CODEC_MONO;
 #else
 	sw_codec_cfg.encoder.channel_mode = SW_CODEC_MONO;
 #endif /* (CONFIG_TRANSPORT_CIS) */
@@ -89,7 +90,7 @@ static void audio_headset_configure(void)
 	sw_codec_cfg.encoder.channel_mode = SW_CODEC_MONO;
 
 	if (IS_ENABLED(CONFIG_SW_CODEC_OPUS)) {
-		sw_codec_cfg.encoder.bitrate = OPUS_BITRATE; //Currently the same bitrate as LC3 Mono maybe change in the future?
+		sw_codec_cfg.encoder.bitrate = OPUS_BITRATE;
 	} else if (IS_ENABLED(CONFIG_SW_CODEC_SBC)) {
 		sw_codec_cfg.encoder.bitrate = CONFIG_SBC_MONO_BITRATE;
 	} else if (IS_ENABLED(CONFIG_SW_CODEC_LC3)) {
