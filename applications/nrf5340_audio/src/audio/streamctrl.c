@@ -188,8 +188,8 @@ static void audio_datapath_thread(void *dummy1, void *dummy2, void *dummy3)
 		ERR_CHK(ret);
 #else
 		audio_datapath_stream_out(iso_received->data, iso_received->data_size,
-					  iso_received->sdu_ref, iso_received->bad_frame,
-					  iso_received->recv_frame_ts, iso_received->sn);
+					  iso_received->sdu_ref, iso_received->sn,
+					  iso_received->bad_frame, iso_received->recv_frame_ts);
 #endif
 		ret = data_fifo_block_free(&ble_fifo_rx, (void *)&iso_received);
 		ERR_CHK(ret);

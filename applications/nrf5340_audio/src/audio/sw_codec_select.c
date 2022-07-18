@@ -63,7 +63,7 @@ static int opus_encoder_configure(struct sw_codec_config sw_codec_cfg)
 {
 	int err;
 
-	err = opus_encoder_ctl(encoder, OPUS_SET_BITRATE(sw_codec_cfg.encoder.bitrate / 2));
+	err = opus_encoder_ctl(encoder, OPUS_SET_BITRATE(sw_codec_cfg.encoder.bitrate / 2)); //Currently the maximum bitrate it can handle is 48kbps
 	if (err < 0) {
 		return err;
 	}
@@ -97,7 +97,7 @@ int sw_codec_encode(void *pcm_data, size_t pcm_size, uint8_t **encoded_data, siz
 	/* Temp storage for split stereo PCM signal */
 	char pcm_data_mono[AUDIO_CH_NUM][PCM_NUM_BYTES_MONO] = { 0 };
 	/* Make sure we have enough space for two frames (stereo) */
-	static uint8_t m_encoded_data[ENC_MAX_FRAME_SIZE * AUDIO_CH_NUM] = { 0 };
+	static uint8_t m_encoded_data[ENC_MAX_FRAME_SIZE * AUDIO_CH_NUM];
 
 	size_t pcm_block_size_mono;
 	int ret;
@@ -108,7 +108,7 @@ int sw_codec_encode(void *pcm_data, size_t pcm_size, uint8_t **encoded_data, siz
 	switch (m_config.sw_codec) {
 	case SW_CODEC_OPUS: {
 #if (CONFIG_SW_CODEC_OPUS)
-		int16_t nbBytes = 0;
+		size_t nbBytes = 0;
 
 		ret = pscm_two_channel_split(pcm_data, pcm_size, CONFIG_AUDIO_BIT_DEPTH_BITS,
 					     pcm_data_mono[AUDIO_CH_L], pcm_data_mono[AUDIO_CH_R],
@@ -124,8 +124,8 @@ int sw_codec_encode(void *pcm_data, size_t pcm_size, uint8_t **encoded_data, siz
 					      pcm_block_size_mono, m_encoded_data,
 					      sizeof(m_encoded_data));
 			if (nbBytes <= 0) {
-				LOG_ERR("Failed to encode packet");
-				return -ENODEV; //Maybe change errorcode
+				LOG_ERR("Failed to encode (err: %d)", nbBytes);
+				return nbBytes;
 			}
 			break;
 		}
@@ -308,9 +308,9 @@ int sw_codec_decode(uint8_t const *const encoded_data, size_t encoded_size, bool
 		switch (m_config.decoder.channel_mode) {
 		case SW_CODEC_MONO: {
 			pcm_size_session = opus_decode(decoder, encoded_data, encoded_size,
-						       pcm_data_mono, 1920, 0);
+						       pcm_data_mono, OPUS_MAX_FRAME_SIZE, 0);
 			if (pcm_size_session < 0) {
-				LOG_ERR("faulty decode: (err: %d)", pcm_size_session);
+				LOG_ERR("Failed to decode (err: %d)", pcm_size_session);
 				return pcm_size_session;
 			}
 

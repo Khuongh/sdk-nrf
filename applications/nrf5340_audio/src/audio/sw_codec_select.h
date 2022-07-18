@@ -42,6 +42,7 @@
 #define OPUS_MAX_FRAME_SIZE_MS 10
 #define OPUS_SAMPLE_RATE 48000
 #define OPUS_BITRATE 96000
+#define OPUS_MAX_FRAME_SIZE 5760
 
 #define OPUS_FRAME_SIZE (OPUS_BITRATE * OPUS_MAX_FRAME_SIZE_MS / (8 * 1000))
 #define OPUS_PCM_NUM_BYTES_MONO                                                                    \

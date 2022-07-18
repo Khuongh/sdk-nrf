@@ -91,14 +91,14 @@ void sync_led_1_on()
 	nrfx_gpiote_out_task_trigger(BLINKLED);
 }
 
-void sync_led_1_compare_time_set_update(uint32_t set_time_us)
+void audio_sync_timer_led_on_cmpr_time_set(uint32_t compare_value)
 {
-	nrfx_timer_compare(&timer_instance, NRF_TIMER_CC_CHANNEL2, set_time_us, true);
+	nrfx_timer_compare(&timer_instance, NRF_TIMER_CC_CHANNEL2, compare_value, true);
 }
 
-void sync_led_1_compare_time_clear_update(uint32_t clear_time_us)
+void audio_sync_timer_led_off_cmpr_time_set(uint32_t compare_value)
 {
-	nrfx_timer_compare(&timer_instance, NRF_TIMER_CC_CHANNEL3, clear_time_us, true);
+	nrfx_timer_compare(&timer_instance, NRF_TIMER_CC_CHANNEL3, compare_value, true);
 }
 
 static int led_1_sync_blink_init(void)

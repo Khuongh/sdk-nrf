@@ -91,8 +91,8 @@ void audio_datapath_sdu_ref_update(uint32_t sdu_ref_us);
  * @param recv_frame_ts_us Timestamp of when audio frame was received
  * @param sn ISO packet sequence number of the first fragment in the SDU
  */
-void audio_datapath_stream_out(const uint8_t *buf, size_t size, uint32_t sdu_ref_us, bool bad_frame,
-			       uint32_t recv_frame_ts_us, uint16_t sn);
+void audio_datapath_stream_out(const uint8_t *buf, size_t size, uint32_t sdu_ref_us, uint16_t sn,
+			       bool bad_frame, uint32_t recv_frame_ts_us);
 
 /**
  * @brief Start the audio datapath module
