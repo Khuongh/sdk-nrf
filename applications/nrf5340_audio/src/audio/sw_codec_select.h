@@ -9,6 +9,30 @@
 
 #include <zephyr/kernel.h>
 
+
+#if (CONFIG_SW_CODEC_OPUS)
+#include "opus.h"
+
+#define FIXED_POINT
+#define DISABLE_FLOAT_API
+#define APPLICATION OPUS_APPLICATION_RESTRICTED_LOWDELAY
+
+#define OPUS_MAX_FRAME_SIZE_MS 10
+#define OPUS_SAMPLE_RATE 48000
+#define OPUS_BITRATE 96000
+#define OPUS_MAX_FRAME_SIZE 5760
+#define OPUS_PCM_FRAME_SIZE_SAMPLES_MONO ((OPUS_SAMPLE_RATE * OPUS_MAX_FRAME_SIZE_MS) / 1000)
+
+#define OPUS_FRAME_SIZE (OPUS_BITRATE * OPUS_MAX_FRAME_SIZE_MS / (8 * 1000))
+#define OPUS_PCM_NUM_BYTES_MONO                                                                    \
+	(OPUS_SAMPLE_RATE * CONFIG_AUDIO_BIT_DEPTH_OCTETS * OPUS_MAX_FRAME_SIZE_MS / 1000)
+
+#else
+#define OPUS_FRAME_SIZE 0
+#define OPUS_PCM_NUM_BYTES_MONO 0
+#define OPUS_BITRATE 0
+#endif /* CONFIG_SW_CODEC_OPUS */
+
 #if (CONFIG_SW_CODEC_LC3)
 #define LC3_MAX_FRAME_SIZE_MS 10
 #define LC3_ENC_MONO_FRAME_SIZE (CONFIG_LC3_BITRATE * LC3_MAX_FRAME_SIZE_MS / (8 * 1000))
@@ -25,15 +49,16 @@
 #endif /* CONFIG_SW_CODEC_LC3 */
 
 /* Max will be used when multiple codecs are supported */
-#define ENC_MAX_FRAME_SIZE MAX(LC3_ENC_MONO_FRAME_SIZE, 0)
+#define ENC_MAX_FRAME_SIZE MAX(LC3_ENC_MONO_FRAME_SIZE, OPUS_FRAME_SIZE)
 #define ENC_TIME_US MAX(LC3_ENC_TIME_US, 0)
 #define DEC_TIME_US MAX(LC3_DEC_TIME_US, 0)
-#define PCM_NUM_BYTES_MONO MAX(LC3_PCM_NUM_BYTES_MONO, 0)
+#define PCM_NUM_BYTES_MONO MAX(LC3_PCM_NUM_BYTES_MONO, OPUS_PCM_NUM_BYTES_MONO)
 #define PCM_NUM_BYTES_STEREO (PCM_NUM_BYTES_MONO * 2)
 
 enum sw_codec_select {
 	SW_CODEC_NONE,
-	SW_CODEC_LC3, /* Low Complexity Communication Codec */
+	SW_CODEC_LC3, /**< Low Complexity Communication Codec */
+	SW_CODEC_OPUS, /**< OPUS Codec */
 };
 
 enum sw_codec_select_ch {
