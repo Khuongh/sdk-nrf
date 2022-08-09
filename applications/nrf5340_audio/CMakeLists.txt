@@ -37,6 +37,7 @@ zephyr_library_include_directories(
     src/modules
     src/utils
     src/utils/macros
+    src/kiss_fft
 )
 
 zephyr_library_include_directories(app PRIVATE
@@ -49,6 +50,7 @@ add_subdirectory(src/drivers)
 add_subdirectory(src/events)
 add_subdirectory(src/modules)
 add_subdirectory(src/utils)
+add_subdirectory(src/kiss_fft)
 
 ## LC3
 if (CONFIG_SW_CODEC_LC3_T2_SOFTWARE)

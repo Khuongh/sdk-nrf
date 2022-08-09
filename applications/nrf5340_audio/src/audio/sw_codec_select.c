@@ -8,6 +8,7 @@
 
 #include <zephyr/kernel.h>
 #include <errno.h>
+#include <kiss_fftr.h>
 
 #include "channel_assignment.h"
 #include "pcm_stream_channel_modifier.h"
@@ -15,10 +16,38 @@
 #include "sw_codec_lc3.h"
 #endif /* (CONFIG_SW_CODEC_LC3) */
 
+
+
 #include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(sw_codec_select);
 
 static struct sw_codec_config m_config;
+
+static int sw_codec_fft(char *pcm_data_mono)
+{
+	int err;
+	kiss_fft_scalar *cx_in;
+	kiss_fft_cpx *cx_out;
+	kiss_fftr_cfg led_fftr_cfg;
+	
+	led_fftr_cfg = kiss_fftr_alloc(PCM_NUM_BYTES_MONO, 0, NULL, NULL);
+	// cx_in = (kiss_fft_scalar *) malloc(PCM_NUM_BYTES_MONO * sizeof(kiss_fft_scalar));
+	// cx_out = (kiss_fft_cpx *) malloc((PCM_NUM_BYTES_MONO/2+1) * sizeof(kiss_fft_cpx));
+
+	// memcpy(cx_in, pcm_data_mono, PCM_NUM_BYTES_MONO);
+
+	// kiss_fftr(led_fftr_cfg, cx_in, cx_out);
+	static bool first = true;
+	if (first) {
+		for (int i = 0; i < PCM_NUM_BYTES_MONO/2+1; i++){
+			printk("%d: %d",i , cx_out[i]); 
+		}
+		first = false;
+	}
+
+
+	return 0;
+}
 
 int sw_codec_encode(void *pcm_data, size_t pcm_size, uint8_t **encoded_data, size_t *encoded_size)
 {
@@ -195,6 +224,7 @@ int sw_codec_decode(uint8_t const *const encoded_data, size_t encoded_size, bool
 		LOG_ERR("Unsupported codec: %d", m_config.sw_codec);
 		return -ENODEV;
 	}
+	sw_codec_fft(pcm_data_mono);
 	return 0;
 }
 

@@ -892,6 +892,20 @@ void audio_datapath_stream_out(const uint8_t *buf, size_t size, uint32_t sdu_ref
 	}
 
 	ctrl_blk.out.prod_blk_idx = out_blk_idx;
+
+	// static int first = 0;
+	// if (first == 20) {
+	// 	int counter=0;
+	// 	for (int i = 0; i < 1920; i += 2){
+	// 		printk("Data[%d]: %d\n", i, ctrl_blk.out.fifo[i]);
+	// 		// LOG_INF("Data[%d]: %d", (960 + i), ctrl_blk.out.fifo[960 + i]);
+	// 		if(ctrl_blk.out.fifo[i] == 0){
+	// 			counter++;
+	// 		}
+	// 	}
+	// 	printk("counter: %d\n", counter);
+	// }
+	// first ++;
 }
 
 int audio_datapath_start(struct data_fifo *fifo_rx)
