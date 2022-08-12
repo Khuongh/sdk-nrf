@@ -243,4 +243,34 @@ config AUDIO_DATAPATH_STACK_SIZE
 	default 7168 if AUDIO_BIT_DEPTH_24 || AUDIO_BIT_DEPTH_32
 
 endmenu # Stack sizes
+
+#----------------------------------------------------------------------------#
+menu "RGB Music Sync"
+
+config RGB_MUSIC_SYNC
+	bool "Enabling RGB synchronization with music"
+	default n
+
+menu "FFT"
+visible if RGB_MUSIC_SYNC
+
+config FFT_SAMPLE_SIZE
+	int "Sample size"
+	default 256
+	help
+		 Supported FFT Lengths are 32, 64, 128, 256, 512,
+		 1024, 2048, 4096 and 8192.
+
+config FFT_FLAG_INVERSE_TRANSFORM
+	int "0 = forward transform, 1 = inverse transform"
+	default 0
+
+config FFT_FLAG_BIT_REVERSAL
+	int "Enable bit reversal"
+	default 1
+
+# Fix choice for samplesize and flags
+	
+endmenu # Music sync
+endmenu # RGB Music Sync
 endmenu # Audio
