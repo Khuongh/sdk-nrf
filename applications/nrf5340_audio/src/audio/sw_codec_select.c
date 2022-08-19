@@ -27,75 +27,52 @@ LOG_MODULE_REGISTER(sw_codec_select);
 static struct sw_codec_config m_config;
 
 #if (CONFIG_RGB_MUSIC_SYNC)
-static enum led_color sw_codec_fft_analyse(q15_t *fft_data, uint32_t len)
+int rgb_led_color_number;
+
+static void set_led_color(int color_number)
 {
-	int32_t sub_bass_module, bass_module, low_mid_module, mid_module, high_mid_module,
-		presence_module, brilliance_module;
+	rgb_led_color_number = color_number;
+}
+
+static void sw_codec_fft_analyse(q15_t *fft_data, uint16_t len)
+{
+	uint16_t frequency_modules[7] = { 0 };
+	uint16_t max_index;
+	uint16_t max_value = 0;
+	enum led_color frequency_color;
 	
-	static int first = 0;
-	if (first == 20) {
-		printk("0: ");
-		for (int i = 0; i < 256; i++){
-			printk("%d ",fft_data[i]);
-			if ((i%20) == 0 && i != 0){
-				printk("\n%d:", i/20);
-			}
-			// LOG_INF("Data[%d]: %d", (960 + i), ctrl_blk.out.fifo[960 + i]);
-		}
-	}
-	first ++;
-
+	/* Assigning FFT bins into modules */
 	for (int i = 0; i < len; i++) {
-		q15_t value = fft_data[i];
-		if (i < SUB_BASS_RANGE) {
-			sub_bass_module += value;
-		} else if (i < BASS_RANGE) {
-			bass_module += value;
-		} else if (i < LOW_MID_RANGE) {
-			low_mid_module += value;
-		} else if (i < MID_RANGE) {
-			mid_module += value;
-		} else if (i < HIGH_MID_RANGE) {
-			high_mid_module += value;
-		} else if (i < PRESENCE_RANGE) {
-			presence_module += value;
-		} else {
-			brilliance_module += value;
+		if(fft_data[i] >= 2){
+			if (i < SUB_BASS_RANGE) {
+				frequency_modules[0] += fft_data[i];
+			} else if (i < BASS_RANGE) {
+				frequency_modules[1] += fft_data[i];
+			} else if (i < LOW_MID_RANGE) {
+				frequency_modules[2] += fft_data[i];
+			} else if (i < MID_RANGE) {
+				frequency_modules[3] += fft_data[i];
+			} else if (i < HIGH_MID_RANGE) {
+				frequency_modules[4] += fft_data[i];
+			} else if (i < PRESENCE_RANGE) {
+				frequency_modules[5] += fft_data[i];
+			} else {
+				frequency_modules[6] += fft_data[i];
+			}
 		}
 	}
 
-	LOG_INF("Sub_Bass: %d, Bass: %d, Low_mid: %d, Mid: %d, High_mid: %d, Presence: %d, Brilliance: %d",
-		sub_bass_module, bass_module, low_mid_module, mid_module, high_mid_module,
-		presence_module, brilliance_module);
+	/* Finding max value from modules */
+	for (int i = 0; i < sizeof(frequency_modules)/sizeof(frequency_modules[0]); i++) {
+		if (frequency_modules[i] > max_value) {
+			max_value = frequency_modules[i];
+			/*  Enum for RGB LED index 0 is off */
+			max_index = (i + 1);
+		}
+	}
 
-	// if ((sub_bass_module > bass_module) && (sub_bass_module > low_mid_module) &&
-	//     (sub_bass_module > mid_module) && (sub_bass_module > high_mid_module) &&
-	//     (sub_bass_module > presence_module) && (sub_bass_module > brilliance_module)) {
-	// 	return LED_COLOR_RED;
-	// } else if ((bass_module > sub_bass_module) && (bass_module > low_mid_module) &&
-	// 	   (bass_module > mid_module) && (bass_module > high_mid_module) &&
-	// 	   (bass_module > presence_module) && (bass_module > brilliance_module)) {
-	// 	return LED_COLOR_YELLOW;
-	// } else if ((low_mid_module > bass_module) && (low_mid_module > sub_bass_module) &&
-	// 	   (low_mid_module > mid_module) && (low_mid_module > high_mid_module) &&
-	// 	   (low_mid_module > presence_module) && (low_mid_module > brilliance_module)) {
-	// 	return LED_COLOR_GREEN;
-	// } else if ((mid_module > bass_module) && (mid_module > low_mid_module) &&
-	// 	   (mid_module > sub_bass_module) && (mid_module > high_mid_module) &&
-	// 	   (mid_module > presence_module) && (mid_module > brilliance_module)) {
-	// 	return LED_COLOR_BLUE;
-	// } else if ((high_mid_module > bass_module) && (high_mid_module > low_mid_module) &&
-	// 	   (high_mid_module > mid_module) && (high_mid_module > sub_bass_module) &&
-	// 	   (high_mid_module > presence_module) && (high_mid_module > brilliance_module)) {
-	// 	return LED_COLOR_CYAN;
-	// } else if ((presence_module > bass_module) && (presence_module > low_mid_module) &&
-	// 	   (presence_module > mid_module) && (presence_module > high_mid_module) &&
-	// 	   (presence_module > sub_bass_module) && (presence_module > brilliance_module)) {
-	// 	return LED_COLOR_MAGENTA;
-	// } else {
-	// 	return LED_COLOR_WHITE;
-	// }
-	return LED_COLOR_WHITE;
+	/* Returning enum index for led_color */
+	set_led_color(max_index);
 }
 
 static int sw_codec_fft(char *pcm_data_mono)
@@ -108,16 +85,22 @@ static int sw_codec_fft(char *pcm_data_mono)
 	status = arm_rfft_init_q15(&fft_instance, CONFIG_FFT_SAMPLE_SIZE,
 				   CONFIG_FFT_FLAG_INVERSE_TRANSFORM, CONFIG_FFT_FLAG_BIT_REVERSAL);
 	if (status != ARM_MATH_SUCCESS) {
-		LOG_ERR("Failed to init FFT instance - (err; %d)", status);
+		LOG_ERR("Failed to init FFT instance - (err: %d)", status);
 		return status;
 	}
 
 	arm_rfft_q15(&fft_instance, (q15_t *)pcm_data_mono, output);
 	arm_abs_q15(output, output, CONFIG_FFT_SAMPLE_SIZE);
-	fft_led_color = sw_codec_fft_analyse(output, CONFIG_FFT_SAMPLE_SIZE);
+	sw_codec_fft_analyse(output, CONFIG_FFT_SAMPLE_SIZE);
+	fft_led_color = get_led_color_number();
 	led_on(LED_APP_RGB, fft_led_color);
 
 	return 0;
+}
+
+int get_led_color_number()
+{
+	return rgb_led_color_number;
 }
 #endif
 
@@ -288,7 +271,7 @@ int sw_codec_decode(uint8_t const *const encoded_data, size_t encoded_size, bool
 		}
 
 		if (CONFIG_RGB_MUSIC_SYNC) {
-			uint32_t delta_time = 100000;
+			uint32_t delta_time = 500000;
 			static uint32_t last_time_stamp;
 			uint32_t time_now = audio_sync_timer_curr_time_get();
 			if ((time_now - last_time_stamp) >= delta_time) {

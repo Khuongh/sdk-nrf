@@ -255,22 +255,26 @@ menu "FFT"
 visible if RGB_MUSIC_SYNC
 
 config FFT_SAMPLE_SIZE
-	int "Sample size"
+	int "Sample size for FFT"
 	default 256
 	help
 		 Supported FFT Lengths are 32, 64, 128, 256, 512,
 		 1024, 2048, 4096 and 8192.
 
 config FFT_FLAG_INVERSE_TRANSFORM
-	int "0 = forward transform, 1 = inverse transform"
+	int "Flag for transform direction"
+	range 0 1
 	default 0
+	help
+		0 for FFT and 1 for IFFT
 
 config FFT_FLAG_BIT_REVERSAL
-	int "Enable bit reversal"
+	int "Flag for bit reversal of output"
+	range 0 1
 	default 1
+	help
+		0 to disable and 1 to enable bitreversal 
 
-# Fix choice for samplesize and flags
-	
 endmenu # Music sync
 endmenu # RGB Music Sync
 endmenu # Audio
