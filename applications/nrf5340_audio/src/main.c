@@ -26,6 +26,7 @@
 #include "audio_system.h"
 #include "channel_assignment.h"
 #include "streamctrl.h"
+#include "music_color_sync.h"
 
 #include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(main, CONFIG_LOG_MAIN_LEVEL);
@@ -223,6 +224,12 @@ void main(void)
 
 	ret = streamctrl_start();
 	ERR_CHK(ret);
+	if (CONFIG_AUDIO_DEV == HEADSET && CONFIG_MUSIC_COLOR_SYNC) {
+		ret = music_color_sync_init();
+		if (ret) {
+			LOG_ERR("Failed to init music color sync - (err: %d)", ret);
+		}
+	}
 
 	while (1) {
 		streamctrl_event_handler();

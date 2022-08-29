@@ -10,17 +10,6 @@
 #include <zephyr/kernel.h>
 #include "channel_assignment.h"
 
-#if (CONFIG_RGB_MUSIC_SYNC)
-#define SUB_BASS_RANGE 1
-#define BASS_RANGE 3
-#define LOW_MID_RANGE 6
-#define MID_RANGE 22
-#define HIGH_MID_RANGE 43
-#define PRESENCE_RANGE 64
-#define BRILLIANCE_RANGE 256
-#else
-#endif
-
 #if (CONFIG_SW_CODEC_LC3)
 #define LC3_MAX_FRAME_SIZE_MS 10
 #define LC3_ENC_MONO_FRAME_SIZE (CONFIG_LC3_BITRATE * LC3_MAX_FRAME_SIZE_MS / (8 * 1000))
