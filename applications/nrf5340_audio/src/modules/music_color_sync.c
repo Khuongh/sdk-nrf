@@ -50,45 +50,30 @@ nrf_pwm_sequence_t const seq =
     .end_delay           = 0
 };
 
-static enum led_color sw_codec_fft_analyse(q15_t *fft_data, uint16_t len)
+static void sw_codec_fft_analyse(q15_t *fft_data, uint16_t len)
 {
-	uint16_t frequency_modules[7] = { 0 };
+	uint16_t frequency_modules[3] = { 0 };
 	uint16_t max_index;
 	uint16_t max_value = 0;
 	enum led_color frequency_color;
 	
 	/* Assigning FFT bins into modules */
 	for (int i = 0; i < len; i++) {
-		if(fft_data[i] >= 2){
-			if (i < SUB_BASS_RANGE) {
+		if(fft_data[i] >= 0){
+			if (i < LOW_MID_RANGE) {
 				frequency_modules[0] += fft_data[i];
-			} else if (i < BASS_RANGE) {
-				frequency_modules[1] += fft_data[i];
-			} else if (i < LOW_MID_RANGE) {
-				frequency_modules[2] += fft_data[i];
-			} else if (i < MID_RANGE) {
-				frequency_modules[3] += fft_data[i];
 			} else if (i < HIGH_MID_RANGE) {
-				frequency_modules[4] += fft_data[i];
-			} else if (i < PRESENCE_RANGE) {
-				frequency_modules[5] += fft_data[i];
+				frequency_modules[1] += fft_data[i];
 			} else {
-				frequency_modules[6] += fft_data[i];
+				frequency_modules[2] += fft_data[i];
 			}
 		}
 	}
-
-	/* Finding max value from modules */
-	for (int i = 0; i < sizeof(frequency_modules)/sizeof(frequency_modules[0]); i++) {
-		if (frequency_modules[i] > max_value) {
-			max_value = frequency_modules[i];
-			/*  Enum for RGB LED index 0 is off */
-			max_index = (i + 1);
-		}
-	}
-
-	/* Returning enum index for led_color */
-	return(max_index);
+	uint32_t total_modules_value =
+		frequency_modules[0] + frequency_modules[1] + frequency_modules[2];
+    seq_values->channel_0 = 100 - (frequency_modules[0] * 100 / total_modules_value);
+    seq_values->channel_1 = 100 - (frequency_modules[1] * 100 / total_modules_value);
+    seq_values->channel_2 = 100 - (frequency_modules[2] * 100 / total_modules_value);
 }
 
 static void music_color_sync_thread(void *dummy1, void *dummy2, void *dummy3)
@@ -126,11 +111,7 @@ static void music_color_sync_thread(void *dummy1, void *dummy2, void *dummy3)
 
 	    arm_rfft_q15(&fft_instance, (q15_t *)decoded_pcm_data_mono, output);
 	    arm_abs_q15(output, output, CONFIG_FFT_SAMPLE_SIZE);
-	    fft_led_color = sw_codec_fft_analyse(output, CONFIG_FFT_SAMPLE_SIZE);
-	    // led_on(LED_APP_RGB, fft_led_color);
-        seq_values->channel_1 = 70;
-        seq_values->channel_2 = 85;
-        seq_values->channel_0 = 40;
+	    sw_codec_fft_analyse(output, CONFIG_FFT_SAMPLE_SIZE);
         nrfx_pwm_simple_playback(&m_pwm, &seq, 1, NRFX_PWM_FLAG_LOOP);
         k_msleep(50);
 
