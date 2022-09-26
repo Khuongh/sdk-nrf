@@ -1,33 +1,22 @@
 
+#ifndef _MUSIC_COLOR_SYNC_H_
+#define _MUSIC_COLOR_SYNC_H_
+
 #include <zephyr/kernel.h>
 
-#if (CONFIG_MUSIC_COLOR_SYNC)
-#define SUB_BASS_RANGE 1
-#define BASS_RANGE 3
-#define LOW_MID_RANGE 6
-#define MID_RANGE 22
-#define HIGH_MID_RANGE 43
-#define PRESENCE_RANGE 64
-#define BRILLIANCE_RANGE 256
-#else
-#endif
-
-#define NRFX_PWM_ENABLED 1
-#define NRFX_PWM0_ENABLED 1 
-
-
-/**
- * @brief Updates data
+/**@brief Updates decoded pcm data used for FFT 
  * 
- * @param pcm_data_mono 
- * @param len 
- * @return int 
+ * @param[in] pcm_data_mono pointer to decoded pcm data (mono)
+ * @param[in] len Size of decoded data
+ * 
+ * @return 0 on success, error otherwise
  */
 int music_color_sync_data_update(char *pcm_data_mono, uint16_t len);
 
-/**
- * @brief Initialize the music color synchronization
+/**@brief Initialize the music color synchronization
  * 
- * @return int 
+ * @return 0 if success, error otherwise
  */
 int music_color_sync_init();
+
+#endif /* _MUSIC_COLOR_SYNC_H */
