@@ -5,3 +5,4 @@ intelhex
 protobuf
 pylint
 zcbor==0.5.1
+prettytable
