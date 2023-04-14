@@ -3,6 +3,7 @@ clang-format
 ecdsa
 imagesize>=1.2.0
 intelhex
+prettytable
 protobuf
 pylint
 wget==3.2
